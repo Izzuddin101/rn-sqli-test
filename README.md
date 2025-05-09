@@ -9,3 +9,5 @@
 4. Run command ```npm install```
 
 5. Then run ```npx expo start --dev-client``` Now you can press A to open on android or scan QR if not using emulator.
+
+## This app is built with Expo. Thank you.
