@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.eldoon101.sqlitetesting"
     },
     "web": {
       "bundler": "metro",
@@ -33,10 +34,24 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      "expo-sqlite",
+        [
+        "expo-asset",
+        {
+          "assets": ["./assets/dataset/embedDB.sqlite"]
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b6e09d07-24fc-4442-a647-8bccbc594613"
+      }
+    },
+    "owner": "eldoon101"
   }
 }
