@@ -1,218 +1,144 @@
 import { Image } from 'expo-image';
-import { StyleSheet } from 'react-native'; 
+import { StyleSheet } from 'react-native';
+import { useSQLiteContext } from 'expo-sqlite'; // Import useSQLiteContext
 
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Button, Alert, View, Text } from 'react-native';
-import { createDatabase, getEntryById, JsonEntry, hasEntries, loadDatabaseFromAsset } from '../../components/ui/vector_db';
-
-// --- Configuration for your bundled SQLite file ---
-const BUNDLED_SQLITE_ASSET_NAME = "embedDB.sqlite"; 
-// const TARGET_DATABASE_NAME = "vdb-pbot-offline"; 
+// Keep your db utility functions, but you won't call createDatabase/loadDatabaseFromAsset from here for initialization
+import { getEntryById, JsonEntry, hasEntries } from '../../db/vector_db';
+import useExistingDB from '@/hooks/useDB';
+// import { useDrizzleStudio } from "expo-drizzle-studio-plugin";
+// useState and useEffect for dbInstance are no longer needed for basic context usage
+// import { useState, useEffect } from 'react';
+// import * as SQLite from 'expo-sqlite'; // SQLite types might still be useful in vector_db.tsx
 
 export default function HomeScreen() {
+  
+  const db = useExistingDB(); // db is a Drizzle instance
 
-  const onPressLoadExistingDatabase = async () => {
-    // Loads the db in asset already
-    const result = await loadDatabaseFromAsset();
+  // If you plan to use Drizzle Studio or similar tools:
+  // useDrizzleStudio(db); // Pass the context's db instance
 
-    if (result.success) {
-      Alert.alert(
-        "Asset DB Loaded",
-        result.message
-      );
-      if (result.db) {
-        // Optionally, you can store the db instance if needed for other operations
-        // setDbInstance(result.db);
-        // If you don't need to hold onto the db object here, you can simply use it and let it go.
-        // For example, if you wanted to immediately close it (though usually not necessary with expo-sqlite):
-        // await result.db.closeAsync();
-        // console.log(`Closed database from asset ${BUNDLED_SQLITE_ASSET_NAME} after check.`);
-      }
-    } else {
-      Alert.alert("Error", result.message);
-    }
-  };
-
-  // --- Deperecated Function to load dataset as its redundant to create and copy ---
-  // const onPressLoadDataset = async () => {
-  //   try {
-  //     const asset = Asset.fromModule(require(`../../assets/${BUNDLED_SQLITE_ASSET_NAME}`));
-  //     const dbDirectory = `${FileSystem.documentDirectory}SQLite/`;
-  //     const dbFilePath = `${dbDirectory}${TARGET_DATABASE_NAME}.sqlite`;
-
-  //     await FileSystem.makeDirectoryAsync(dbDirectory, { intermediates: true });
-
-  //     // Check if the database file already exists in the target directory
-  //     const dbInfo = await FileSystem.getInfoAsync(dbFilePath);
-
-  //     // If it exists, delete it to ensure a fresh copy from assets.
-  //     // For a production app, you might want a more nuanced update strategy,
-  //     // but for ensuring the bundled asset is loaded correctly, this is effective.
-  //     if (dbInfo.exists) {
-  //       console.log(`Existing database file "${TARGET_DATABASE_NAME}.sqlite" found. Deleting to ensure fresh copy from assets.`);
-  //       await FileSystem.deleteAsync(dbFilePath, { idempotent: true });
-  //     }
-
-  //     // Now, copy the database from assets.
-  //     console.log(`Copying database "${BUNDLED_SQLITE_ASSET_NAME}" from assets to "${dbFilePath}"...`);
-  //     if (!asset.downloaded) {
-  //       await asset.downloadAsync();
-  //     }
-  //     if (!asset.localUri) {
-  //       throw new Error("Asset could not be downloaded or its local URI is unavailable.");
-  //     }
-  //     await FileSystem.copyAsync({
-  //       from: asset.localUri,
-  //       to: dbFilePath,
-  //     });
-  //     Alert.alert("Setup Complete", `Database "${TARGET_DATABASE_NAME}.sqlite" freshly copied from assets.`);
-  //     console.log(`Database "${TARGET_DATABASE_NAME}.sqlite" freshly copied from assets to ${dbFilePath}`);
-
-  //     // Now, open the database.
-  //     // createDatabase() will open the 'vdb-pbot-offline.sqlite' file we just copied.
-  //     const db = await createDatabase(); 
-
-  //     if (db) {
-  //       // Verify if the database (now a fresh copy of output.sqlite) has entries in 'my_table'.
-  //       const entriesExist = await hasEntries(db);
-  //       if (entriesExist) {
-  //         Alert.alert("Success", `Dataset "${TARGET_DATABASE_NAME}" loaded and contains entries in 'my_table'.`);
-  //         console.log(`Dataset "${TARGET_DATABASE_NAME}" loaded and has entries in 'my_table'.`);
-  //       } else {
-  //         Alert.alert("Notice", `Dataset "${TARGET_DATABASE_NAME}" loaded, but 'my_table' appears to be empty. Check your bundled 'output.sqlite' file.`);
-  //         console.log(`Dataset "${TARGET_DATABASE_NAME}" loaded, but hasEntries (for 'my_table') returned false.`);
-  //       }
-  //     } else {
-  //       Alert.alert("Error", `Failed to open database "${TARGET_DATABASE_NAME}".`);
-  //       console.log(`Failed to open database "${TARGET_DATABASE_NAME}".`);
-  //     }
-  //   } catch (e) {
-  //     const errorMessage = e instanceof Error ? e.message : String(e);
-  //     console.error("Failed to load dataset from .sqlite file:", errorMessage, e);
-  //     Alert.alert("Error", `Failed to load dataset: ${errorMessage}`);
-  //   }
-  // };
-
-  // --- Create database with the name 'vdb-pbot-offline' (vector db pbot offline lol)
-  const onPressCreateDatabase = async () => {
-    try {
-      const db = await createDatabase();
-      if(db) {
-        console.log("Succesfully created!");
-        Alert.alert("Success", "Database created");
-      } else {
-        console.log("Database creation returned null");
-      } 
-    } catch (e) {
-      console.error("Failed to create database", e)
-    }
-  }  
+  // The onPressLoadExistingDatabase and onPressCreateDatabase buttons
+  // might be redundant if the DB is always loaded by SQLiteProvider.
+  // You can remove them or repurpose them if needed (e.g., for re-copying the asset via a more complex setup).
 
   const onPressGetEntries = async () => {
+    console.log("Button 'Check Entries' pressed.");
+    if (!db || !db.$client) { // Check for db and db.$client
+      Alert.alert("Error", "Database context not available.");
+      return;
+    }
     try {
-      // It's generally better to manage the db instance in state if you use it in multiple places.
-      // For this isolated function, we'll open/get it here.
-      const db = await createDatabase(); 
-      if (db) {
-        const entriesDoExist = await hasEntries(db);
-        if (entriesDoExist) {
-          Alert.alert("Database Status", "The database has entries.");
-        } else {
-          Alert.alert("Database Status", "The database is empty.");
-        }
-        // Optionally, you might want to close the db if you opened it just for this check
-        // await db.closeAsync(); 
-        // However, if createDatabase() is idempotent and just returns the open instance, closing might be premature.
+      // Pass the raw SQLite client to functions expecting SQLiteDatabase
+      const entriesDoExist = await hasEntries(db.$client); 
+      if (entriesDoExist) {
+        Alert.alert("Database Status", "The database has entries.");
       } else {
-        Alert.alert("Error", "Could not connect to the database to check for entries.");
+        Alert.alert("Database Status", "The database is empty or 'my_table' does not exist/is empty.");
       }
     } catch (error) {
       console.error("Failed to check for entries:", error);
       Alert.alert("Error", "An error occurred while checking for entries.");
     }
   };
-  // Removed database-related state and useEffect
+
+  // Example: How you might use getEntryById
+  const onPressGetSpecificEntry = async (id: number) => {
+    if (!db || !db.$client) { // Check for db and db.$client
+      Alert.alert("Error", "Database context not available.");
+      return;
+    }
+    try {
+      // Pass the raw SQLite client
+      const entry = await getEntryById(db.$client, id); 
+      if (entry) {
+        Alert.alert("Entry Found", `Text: ${entry.text}`);
+      } else {
+        Alert.alert("Entry Not Found", `No entry with id ${id}.`);
+      }
+    } catch (error) {
+      console.error(`Failed to get entry ${id}:`, error);
+      Alert.alert("Error", `An error occurred while fetching entry ${id}.`);
+    }
+  };
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
       headerImage={
         <Image
-          source={require('../../assets/images/react-logo.png')} // Assuming you still want this background image
+          source={require('../../assets/images/react-logo.png')}
           style={styles.dbLogo}
         />
       }>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Vector DB Test</ThemedText> 
-        {/* You can change this title to something more generic if needed */}
+        <ThemedText type="title">Vector DB Test</ThemedText>
       </ThemedView>
 
       <ThemedView style={styles.contentContainer}>
-        {/* Simplified content */}
         <ThemedText>Welcome to the Database Screen!</ThemedText>
-        <ThemedText>You can create database by clicking the first button but load dataset?</ThemedText>
+        {!db && <ThemedText style={{color: 'orange'}}>Database context initializing or not available...</ThemedText>}
+        {db && <ThemedText style={{color: 'green'}}>Database context is available!</ThemedText>}
       </ThemedView>
 
-      <Button
-        onPress={onPressCreateDatabase}
-        title="Create database"
-        color="#000000"
-        accessibilityLabel="Create database"
-      />
+      {/* 
+        The "Create/Open DB" and "Load DB From Asset" buttons are likely no longer needed 
+        here if SQLiteProvider handles the initial load.
+        You can remove them or adapt their functionality if they serve other purposes.
+      */}
+      {/* <Button
+        onPress={onPressCreateDatabase} // This would need to be re-thought
+        title="Create/Open DB (embedDB)"
+        color="#0047AB"
+        accessibilityLabel="Create or open the default database"
+      /> */}
 
       <Button
         onPress={onPressGetEntries}
-        title="Check Entries"
+        title="Check Entries in Current DB"
         color="#0047AB"
-        accessibilityLabel="Check if DB has entriess"
+        accessibilityLabel="Check if the current DB has entries"
+        disabled={!db} // Disable if db context is not yet available
       />
 
+      {/* Example button for getEntryById */}
       <Button
-        onPress={onPressLoadExistingDatabase}
-        title="Open Existing Database"
+        onPress={() => onPressGetSpecificEntry(1)} // Example: get entry with id 1
+        title="Get Entry with ID 1"
         color="#0047AB"
-        accessibilityLabel="Check if DB has entriess"
+        accessibilityLabel="Get a specific entry by ID"
+        disabled={!db}
       />
+      
+      {/* <Button
+        onPress={onPressLoadExistingDatabase} // This would need to be re-thought
+        title="Load DB From Asset (embedDB)"
+        color="#0047AB"
+        accessibilityLabel="Load database from pre-bundled asset"
+      /> */}
       
     </ParallaxScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    marginTop: 10, 
-  },
-  contentContainer: {
-    padding: 16,
-    gap: 16, 
-  },
-  // "remove" this dblogo
   dbLogo: {
-    height: 50, 
-    width: 50,  
+    height: 178,
+    width: 290,
     bottom: 0,
     left: 0,
     position: 'absolute',
   },
-  // Styles for FileUploadComponent
-  fileUploadContainer: {
-    marginVertical: 20,
+  titleContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  fileDetailsContainer: {
-    marginTop: 15,
-    padding: 10,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 5,
+  contentContainer: {
+    gap: 8,
+    padding: 16,
   },
-  fileDetailsText: {
-    fontSize: 14,
-    color: '#333', // Darker text for better readability on light background
-  }
-  // Removed unused styles: statusText, errorContainer, entryDetailsContainer
 });

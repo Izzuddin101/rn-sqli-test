@@ -7,6 +7,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "sqlitetesting",
     "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "assets/**/*"
+    ],
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
@@ -39,7 +42,7 @@
         [
         "expo-asset",
         {
-          "assets": ["./assets/dataset/embedDB.sqlite"]
+          "assets": ["./assets/dataset.db"]
         }
       ]
     ],
