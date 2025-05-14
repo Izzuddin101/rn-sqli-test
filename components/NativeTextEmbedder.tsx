@@ -4,7 +4,7 @@ import * as FileSystem from 'expo-file-system';
 import * as ort from 'onnxruntime-react-native';
 
 // Model Options for Embedding, there is 1 Quantized Model, and 4 Other "Optimized" models
-const MODEL_OPTIONS = [
+export const MODEL_OPTIONS = [
     {
       label: "Optimized Level 1",
       repo: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
@@ -40,7 +40,7 @@ const MODEL_OPTIONS = [
   ];
 
 // Add platform-specific quantized models ju
-if (Platform.OS === 'ios') {
+ if (Platform.OS === 'ios') {
     MODEL_OPTIONS.push({
       label: "Quantized for ARM64 (iOS)",
       repo: "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",

@@ -10,12 +10,6 @@ export type JsonEntry = {
 };
 
 
-export default function useExistingDB() {
-  const db = SQLite.useSQLiteContext();
-  return driz
-}
-
-
 // Create or (Open) database and table
 export const createDatabase = async () => {
   console.log("Attempting to open embedDB");
